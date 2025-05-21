@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestor de Reuniones Diarias</title>
+  <!-- Bootstrap CSS -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #f8f9fa;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 1rem;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    }
+    .btn-primary {
+      background-color: #6c5ce7;
+      border-color: #6c5ce7;
+    }
+    .btn-primary:hover {
+      background-color: #5a4bd8;
+      border-color: #5a4bd8;
+    }
+    .nav-link.active {
+      background-color: #5a4bd8;
+      border-radius: 0.5rem;
+    }
+    .modal-content {
+      background-color: rgba(44, 47, 51, 0.95);
+      color: #f8f9fa;
+    }
+    .form-control, .form-select {
+      background-color: #343a40;
+      border: 1px solid #6c5ce7;
+      color: #f8f9fa;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: #5a4bd8;
+      box-shadow: 0 0 8px #6c5ce7;
+      background-color: #2c2f33;
+      color: #f8f9fa;
+    }
+    footer {
+      text-align: center;
+      margin-top: 2rem;
+      color: #d1d1d1;
+    }
+    .table thead {
+      background-color: #6c5ce7;
+      color: white;
+    }
+    .badge-accepted {
+      background-color: #2ecc71;
+    }
+    .badge-rejected {
+      background-color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-transparent px-4 py-3">
+    <a class="navbar-brand fs-3 fw-bold" href="#">ReunionesDiarias</a>
+    <div id="navAuthArea" class="ms-auto"></div>
+  </nav>
+
+  <main class="container my-4" id="mainContent">
+    <!-- Login form -->
+    <section id="loginSection" class="d-flex justify-content-center align-items-center" style="min-height: 70vh;">
+      <div class="card p-4 shadow" style="width: 350px;">
+        <h3 class="text-center mb-4">Iniciar Sesión</h3>
+        <form id="loginForm">
+          <div class="mb-3">
+            <label for="loginUsername" class="form-label">Usuario</label>
+            <input type="text" id="loginUsername" class="form-control" required autocomplete="username" />
+          </div>
+          <div class="mb-3">
+            <label for="loginPassword" class="form-label">Contraseña</label>
+            <input type="password" id="loginPassword" class="form-control" required autocomplete="current-password" />
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">Entrar</button>
+          </div>
+          <div id="loginError" class="text-danger mt-3" style="display:none;"></div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dashboardSection" style="display:none;">
+      <ul
+        class="nav nav-tabs mb-4"
+        id="dashboardTabs"
+        role="tablist"
+      >
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link active"
+            id="meetings-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#meetingsTab"
+            type="button"
+            role="tab"
+            aria-controls="meetingsTab"
+            aria-selected="true"
+          >Reuniones</button>
+        </li>
+        <li class="nav-item d-none" role="presentation" id="adminUsersTabBtn">
+          <button
+            class="nav-link"
+            id="users-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#usersTab"
+            type="button"
+            role="tab"
+            aria-controls="usersTab"
+            aria-selected="false"
+          >Usuarios</button>
+        </li>
+        <li class="nav-item d-none" role="presentation" id="adminMeetingsTabBtn">
+          <button
+            class="nav-link"
+            id="manageMeetings-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#manageMeetingsTab"
+            type="button"
+            role="tab"
+            aria-controls="manageMeetingsTab"
+            aria-selected="false"
+          >Gestionar Reuniones</button>
+        </li>
+      </ul>
+
+      <div class="tab-content" id="dashboardTabsContent">
+        <!-- Meetings Tab -->
+        <div
+          class="tab-pane fade show active"
+          id="meetingsTab"
+          role="tabpanel"
+          aria-labelledby="meetings-tab"
+        >
+          <h4>Reuniones de Hoy</h4>
+          <div id="meetingsList" class="row gy-3"></div>
+        </div>
+
+        <!-- Admin Users Tab -->
+        <div
+          class="tab-pane fade"
+          id="usersTab"
+          role="tabpanel"
+          aria-labelledby="users-tab"
+        >
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>Gestión de Usuarios</h4>
+            <button
+              class="btn btn-success"
+              data-bs-toggle="modal"
+              data-bs-target="#userModal"
+              id="addUserBtn"
+            >Agregar Usuario</button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-striped table-dark align-middle">
+              <thead>
+                <tr>
+                  <th>Usuarios</th>
+                  <th>Rol</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Admin Manage Meetings Tab -->
+        <div
+          class="tab-pane fade"
+          id="manageMeetingsTab"
+          role="tabpanel"
+          aria-labelledby="manageMeetings-tab"
+        >
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>Agregar Reunión</h4>
+            <button
+              class="btn btn-primary"
+              data-bs-toggle="modal"
+              data-bs-target="#meetingModal"
+              id="addMeetingBtn"
+            >Nueva Reunión</button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-striped table-dark align-middle">
+              <thead>
+                <tr>
+                  <th>Título</th>
+                  <th>Descripción</th>
+                  <th>Hora</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="meetingsAdminTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <small>© 2024 ReunionesDiarias. Creado con ❤️ y Bootstrap.</small>
+  </footer>
+
+  <!-- User Modal -->
+  <div
+    class="modal fade"
+    id="userModal"
+    tabindex="-1"
+    aria-labelledby="userModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog">
+      <form id="userForm" class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="userModalLabel">Agregar Usuario</h5>
+          <button
+            type="button"
+            class="btn-close btn-close-white"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editUserIndex" />
+          <div class="mb-3">
+            <label for="usernameInput" class="form-label">Usuario</label>
+            <input
+              type="text"
+              id="usernameInput"
+              class="form-control"
+              required
+              minlength="3"
+              maxlength="20"
+              autocomplete="off"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="passwordInput" class="form-label">Contraseña</label>
+            <input
+              type="password"
+              id="passwordInput"
+              class="form-control"
+              required
+              minlength="4"
+              autocomplete="new-password"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="roleSelect" class="form-label">Rol</label>
+            <select id="roleSelect" class="form-select" required>
+              <option value="" disabled selected>Seleccione rol</option>
+              <option value="admin">Administrador</option>
+              <option value="user">Usuario</option>
+            </select>
+          </div>
+          <div id="userFormError" class="text-danger" style="display:none;"></div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >Cancelar</button>
+          <button type="submit" class="btn btn-success" id="saveUserBtn">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Meeting Modal -->
+  <div
+    class="modal fade"
+    id="meetingModal"
+    tabindex="-1"
+    aria-labelledby="meetingModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog">
+      <form id="meetingForm" class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="meetingModalLabel">Agregar Reunión</h5>
+          <button
+            type="button"
+            class="btn-close btn-close-white"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editMeetingIndex" />
+          <div class="mb-3">
+            <label for="meetingTitleInput" class="form-label">Título</label>
+            <input
+              type="text"
+              id="meetingTitleInput"
+              class="form-control"
+              required
+              maxlength="50"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="meetingDescInput" class="form-label">Descripción</label>
+            <textarea
+              id="meetingDescInput"
+              class="form-control"
+              rows="3"
+              maxlength="200"
+              required
+            ></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="meetingTimeInput" class="form-label">Hora (24h)</label>
+            <input
+              type="time"
+              id="meetingTimeInput"
+              class="form-control"
+              required
+            />
+          </div>
+          <div id="meetingFormError" class="text-danger" style="display:none;"></div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="saveMeetingBtn">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Bootstrap Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    (() => {
+      // Data keys for localStorage
+      const LS_USERS = 'rd_users';
+      const LS_MEETINGS = 'rd_meetings';
+      const LS_RESPONSES = 'rd_responses'; // {username: {meetingId: 'accepted'|'rejected'}}
+
+      // Cached DOM elements
+      const loginSection = document.getElementById('loginSection');
+      const dashboardSection = document.getElementById('dashboardSection');
+      const navAuthArea = document.getElementById('navAuthArea');
+      const loginForm = document.getElementById('loginForm');
+      const loginError = document.getElementById('loginError');
+      const loginUsername = document.getElementById('loginUsername');
+      const loginPassword = document.getElementById('loginPassword');
+
+      const meetingsList = document.getElementById('meetingsList');
+      const usersTableBody = document.getElementById('usersTableBody');
+      const meetingsAdminTableBody = document.getElementById('meetingsAdminTableBody');
+
+      const adminUsersTabBtn = document.getElementById('adminUsersTabBtn');
+      const adminMeetingsTabBtn = document.getElementById('adminMeetingsTabBtn');
+
+      // User modal
+      const userModalEl = document.getElementById('userModal');
+      const userModal = new bootstrap.Modal(userModalEl);
+      const userForm = document.getElementById('userForm');
+      const usernameInput = document.getElementById('usernameInput');
+      const passwordInput = document.getElementById('passwordInput');
+      const roleSelect = document.getElementById('roleSelect');
+      const userFormError = document.getElementById('userFormError');
+      const editUserIndexInput = document.getElementById('editUserIndex');
+
+      // Meeting modal
+      const meetingModalEl = document.getElementById('meetingModal');
+      const meetingModal = new bootstrap.Modal(meetingModalEl);
+      const meetingForm = document.getElementById('meetingForm');
+      const meetingTitleInput = document.getElementById('meetingTitleInput');
+      const meetingDescInput = document.getElementById('meetingDescInput');
+      const meetingTimeInput = document.getElementById('meetingTimeInput');
+      const meetingFormError = document.getElementById('meetingFormError');
+      const editMeetingIndexInput = document.getElementById('editMeetingIndex');
+
+      // Dashboard tabs
+      const dashboardTabs = document.getElementById('dashboardTabs');
+      const meetingsTab = document.getElementById('meetingsTab');
+      const usersTab = document.getElementById('usersTab');
+      const manageMeetingsTab = document.getElementById('manageMeetingsTab');
+
+      let currentUser = null;
+      let users = [];
+      let meetings = [];
+      let responses = {};
+
+      // Helpers
+
+      function saveUsers() {
+        localStorage.setItem(LS_USERS, JSON.stringify(users));
+      }
+
+      function saveMeetings() {
+        localStorage.setItem(LS_MEETINGS, JSON.stringify(meetings));
+      }
+
+      function saveResponses() {
+        localStorage.setItem(LS_RESPONSES, JSON.stringify(responses));
+      }
+
+      function loadUsers() {
+        let lsUsers = localStorage.getItem(LS_USERS);
+        if (lsUsers) {
+          users = JSON.parse(lsUsers);
+        } else {
+          // Create default admin user
+          users = [{
+            username: 'jona',
+            password: 'jona',
+            role: 'admin',
+          }];
+          saveUsers();
+        }
+      }
+
+      function loadMeetings() {
+        let lsMeetings = localStorage.getItem(LS_MEETINGS);
+        if (lsMeetings) {
+          meetings = JSON.parse(lsMeetings);
+        } else {
+          meetings = [];
+          saveMeetings();
+        }
+      }
+
+      function loadResponses() {
+        let lsResponses = localStorage.getItem(LS_RESPONSES);
+        if (lsResponses) {
+          responses = JSON.parse(lsResponses);
+        } else {
+          responses = {};
+          saveResponses();
+        }
+      }
+
+      // Format time HH:MM for display
+      function formatTime(t) {
+        return t;
+      }
+
+      // Date today string YYYY-MM-DD
+      function todayDate() {
+        return new Date().toISOString().slice(0, 10);
+      }
+
+      // Generate unique IDs for meetings
+      function generateMeetingId() {
+        return 'm-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+      }
+
+      // UI Rendering
+
+      function renderNav() {
+        if (currentUser) {
+          navAuthArea.innerHTML = \`
+            <span class="me-3">Hola, <strong>\${currentUser.username}</strong></span>
+            <button id="logoutBtn" class="btn btn-outline-light btn-sm">Cerrar sesión</button>
+          \`;
+          document.getElementById('logoutBtn').addEventListener('click', logout);
+        } else {
+          navAuthArea.innerHTML = '';
+        }
+      }
+
+      function showLogin() {
+        loginSection.style.display = 'flex';
+        dashboardSection.style.display = 'none';
+        loginError.style.display = 'none';
+        loginForm.reset();
+        loginUsername.focus();
+        adminUsersTabBtn.classList.add('d-none');
+        adminMeetingsTabBtn.classList.add('d-none');
+      }
+
+      function showDashboard() {
+        loginSection.style.display = 'none';
+        dashboardSection.style.display = 'block';
+
+        if (currentUser.role === 'admin') {
+          adminUsersTabBtn.classList.remove('d-none');
+          adminMeetingsTabBtn.classList.remove('d-none');
+        } else {
+          adminUsersTabBtn.classList.add('d-none');
+          adminMeetingsTabBtn.classList.add('d-none');
+        }
+
+        renderMeetingsList();
+        if (currentUser.role === 'admin') {
+          renderUsersTable();
+          renderMeetingsAdminTable();
+        }
+      }
+
+      function logout() {
+        currentUser = null;
+        localStorage.removeItem('rd_currentUser');
+        renderNav();
+        showLogin();
+      }
+
+      function checkLogin(username, password) {
+        return users.find(u => u.username === username && u.password === password);
+      }
+
+      // Meeting accepted/rejected status for current user
+      function getUserResponse(meetingId) {
+        if (!currentUser) return null;
+        if (!responses[currentUser.username]) return null;
+        return responses[currentUser.username][meetingId] || null;
+      }
+
+      function setUserResponse(meetingId, response) {
+        if (!currentUser) return;
+        if (!responses[currentUser.username]) {
+          responses[currentUser.username] = {};
+        }
+        responses[currentUser.username][meetingId] = response;
+        saveResponses();
+        renderMeetingsList();
+      }
+
+      // Filter meetings of today
+      function getTodayMeetings() {
+        const today = todayDate();
+        // meetings have no specific date, we consider they happen daily - so all listed
+        // We will show all meetings, sorted by time
+        return meetings.slice().sort((a, b) =>
+          a.time.localeCompare(b.time)
+        );
+      }
+
+      // Render meetings in user dashboard
+      function renderMeetingsList() {
+        meetingsList.innerHTML = '';
+        const mts = getTodayMeetings();
+        if (mts.length === 0) {
+          meetingsList.innerHTML = '<p>No hay reuniones programadas para hoy.</p>';
+          return;
+        }
+        mts.forEach(m => {
+          const userResp = getUserResponse(m.id);
+          const card = document.createElement('div');
+          card.classList.add('col-md-6');
+
+          let statusBadge = '';
+          if (userResp === 'accepted') {
+            statusBadge = '<span class="badge badge-accepted fs-6">Aceptada</span>';
+          } else if (userResp === 'rejected') {
+            statusBadge = '<span class="badge badge-rejected fs-6">Rechazada</span>';
+          } else {
+            statusBadge = '<span class="badge bg-secondary fs-6">Sin respuesta</span>';
+          }
+
+          card.innerHTML = \`
+            <div class="card p-3 h-100">
+              <h5>\${m.title} \${statusBadge}</h5>
+              <p class="mb-1">\${m.description}</p>
+              <p><strong>Hora:</strong> \${formatTime(m.time)}</p>
+              <div>
+                <button class="btn btn-success btn-sm me-2 btn-accept" data-id="\${m.id}" \${userResp === 'accepted' ? 'disabled' : ''}>Aceptar</button>
+                <button class="btn btn-danger btn-sm btn-reject" data-id="\${m.id}" \${userResp === 'rejected' ? 'disabled' : ''}>Rechazar</button>
+              </div>
+            </div>
+          \`;
+          meetingsList.appendChild(card);
+        });
+
+        // Attach event listeners to accept/reject buttons
+        document.querySelectorAll('.btn-accept').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const mId = e.target.getAttribute('data-id');
+            setUserResponse(mId, 'accepted');
+          });
+        });
+        document.querySelectorAll('.btn-reject').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const mId = e.target.getAttribute('data-id');
+            setUserResponse(mId, 'rejected');
+          });
+        });
+      }
+
+      // Admin user management
+
+      function renderUsersTable() {
+        usersTableBody.innerHTML = '';
+        users.forEach((u, idx) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = \`
+            <td>\${u.username}</td>
+            <td>\${u.role === 'admin' ? 'Administrador' : 'Usuario'}</td>
+            <td>
+              <button class="btn btn-sm btn-primary me-2 btn-edit-user" data-index="\${idx}">Editar</button>
+              <button class="btn btn-sm btn-danger btn-delete-user" data-index="\${idx}" \${u.username === currentUser.username ? 'disabled' : ''}>Eliminar</button>
+            </td>
+          \`;
+          usersTableBody.appendChild(tr);
+        });
+
+        document.querySelectorAll('.btn-edit-user').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const idx = e.target.getAttribute('data-index');
+            editUser(idx);
+          });
+        });
+        document.querySelectorAll('.btn-delete-user').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const idx = e.target.getAttribute('data-index');
+            deleteUser(idx);
+          });
+        });
+      }
+
+      function editUser(idx) {
+        const u = users[idx];
+        userFormError.style.display = 'none';
+        editUserIndexInput.value = idx;
+        usernameInput.value = u.username;
+        passwordInput.value = u.password;
+        roleSelect.value = u.role;
+        // Show modal
+        userModal.show();
+        usernameInput.focus();
+      }
+
+      function deleteUser(idx) {
+        if (!confirm('¿Está seguro de eliminar este usuario?')) return;
+        const userToDelete = users[idx];
+        if (userToDelete.username === currentUser.username) {
+          alert('No puede eliminar su propio usuario.');
+          return;
+        }
+        users.splice(idx, 1);
+        saveUsers();
+        renderUsersTable();
+      }
+
+      userForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        userFormError.style.display = 'none';
+        const uname = usernameInput.value.trim();
+        const pwd = passwordInput.value;
+        const role = roleSelect.value;
+        const editIdx = editUserIndexInput.value;
+
+        if (!uname || !pwd || !role) {
+          userFormError.textContent = 'Completa todos los campos.';
+          userFormError.style.display = 'block';
+          return;
+        }
+
+        // Validate username uniqueness
+        const userExists = users.some((u, idx) => u.username === uname && idx != editIdx);
+        if (userExists) {
+          userFormError.textContent = 'El nombre de usuario ya está en uso.';
+          userFormError.style.display = 'block';
+          return;
+        }
+
+        if (editIdx !== '') {
+          // Edit user
+          const existingUser = users[editIdx];
+          existingUser.username = uname;
+          existingUser.password = pwd;
+          existingUser.role = role;
+          // If currently logged user edited own username, update currentUser ref
+          if (currentUser.username === existingUser.username) {
+            currentUser.username = uname;
+            currentUser.role = role;
+            localStorage.setItem('rd_currentUser', JSON.stringify(currentUser));
+            renderNav();
+          }
+        } else {
+          // Add new user
+          users.push({
+            username: uname,
+            password: pwd,
+            role
+          });
+        }
+
+        saveUsers();
+        renderUsersTable();
+        userModal.hide();
+        userForm.reset();
+        editUserIndexInput.value = '';
+      });
+
+      // Admin meeting management
+
+      function renderMeetingsAdminTable() {
+        meetingsAdminTableBody.innerHTML = '';
+        meetings.forEach((m, idx) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = \`
+            <td>\${m.title}</td>
+            <td>\${m.description}</td>
+            <td>\${m.time}</td>
+            <td>
+              <button class="btn btn-sm btn-primary me-2 btn-edit-meeting" data-index="\${idx}">Editar</button>
+              <button class="btn btn-sm btn-danger btn-delete-meeting" data-index="\${idx}">Eliminar</button>
+            </td>
+          \`;
+          meetingsAdminTableBody.appendChild(tr);
+        });
+        document.querySelectorAll('.btn-edit-meeting').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const idx = e.target.getAttribute('data-index');
+            editMeeting(idx);
+          });
+        });
+        document.querySelectorAll('.btn-delete-meeting').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const idx = e.target.getAttribute('data-index');
+            deleteMeeting(idx);
+          });
+        });
+      }
+
+      function editMeeting(idx) {
+        const m = meetings[idx];
+        meetingFormError.style.display = 'none';
+        editMeetingIndexInput.value = idx;
+        meetingTitleInput.value = m.title;
+        meetingDescInput.value = m.description;
+        meetingTimeInput.value = m.time;
+        meetingModal.show();
+        meetingTitleInput.focus();
+      }
+
+      function deleteMeeting(idx) {
+        if (!confirm('¿Está seguro de eliminar esta reunión?')) return;
+        meetings.splice(idx, 1);
+        saveMeetings();
+        renderMeetingsAdminTable();
+      }
+
+      meetingForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        meetingFormError.style.display = 'none';
+        const title = meetingTitleInput.value.trim();
+        const desc = meetingDescInput.value.trim();
+        const time = meetingTimeInput.value;
+
+        if (!title || !desc || !time) {
+          meetingFormError.textContent = 'Completa todos los campos.';
+          meetingFormError.style.display = 'block';
+          return;
+        }
+
+        const editIdx = editMeetingIndexInput.value;
+        if (editIdx !== '') {
+          const existingMeeting = meetings[editIdx];
+          existingMeeting.title = title;
+          existingMeeting.description = desc;
+          existingMeeting.time = time;
+        } else {
+          const newMeeting = {
+            id: generateMeetingId(),
+            title,
+            description: desc,
+            time
+          };
+          meetings.push(newMeeting);
+        }
+
+        saveMeetings();
+        renderMeetingsAdminTable();
+        meetingModal.hide();
+        meetingForm.reset();
+        editMeetingIndexInput.value = '';
+        renderMeetingsList();
+      });
+
+      // Login form submit
+
+      loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        loginError.style.display = 'none';
+        const uname = loginUsername.value.trim();
+        const pwd = loginPassword.value;
+        const validUser = checkLogin(uname, pwd);
+        if (validUser) {
+          currentUser = validUser;
+          localStorage.setItem('rd_currentUser', JSON.stringify(currentUser));
+          renderNav();
+          showDashboard();
+        } else {
+          loginError.textContent = 'Usuario o contraseña incorrectos.';
+          loginError.style.display = 'block';
+        }
+      });
+
+      // Auto-login if current user saved in localStorage
+
+      function autoLogin() {
+        const savedUserRaw = localStorage.getItem('rd_currentUser');
+        if (savedUserRaw) {
+          const savedUser = JSON.parse(savedUserRaw);
+          // Check if user still exists in users list (password match is skipped here since it's persistent login)
+          const matchedUser = users.find(u => u.username === savedUser.username);
+          if (matchedUser) {
+            currentUser = matchedUser;
+            renderNav();
+            showDashboard();
+            return true;
+          }
+        }
+        return false;
+      }
+
+      // Initialization
+
+      function init() {
+        loadUsers();
+        loadMeetings();
+        loadResponses();
+
+        if (!autoLogin()) {
+          showLogin();
+        }
+      }
+
+      // Kickoff
+      init();
+    })();
+  </script>
+</body>
+</html>
+
